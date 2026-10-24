@@ -37,6 +37,10 @@ final class GamepadNavigationHostViewController: GCEventViewController {
 
 @main
 class AppDelegate: FlutterAppDelegate {
+    // Keep the single Flutter host alive across scene disconnections. The scene
+    // owns its window; plugins and channels are still ready before app launch ends.
+    private(set) var gamepadHost: GamepadNavigationHostViewController?
+    private var hasConnectedScene = false
     private var nativeApplePlayerChannel: NativeApplePlayerChannel?
     private var topShelfChannel: TopShelfChannel?
     private var previewChannel: AppleTvPreviewChannel?
@@ -53,14 +57,10 @@ class AppDelegate: FlutterAppDelegate {
         let flutterViewController = FlutterViewController(project: nil, nibName: nil, bundle: nil)
         let gamepadHost = GamepadNavigationHostViewController(
             flutterViewController: flutterViewController)
-        let window = UIWindow(frame: UIScreen.main.bounds)
-        window.rootViewController = gamepadHost
-        window.makeKeyAndVisible()
-        self.window = window
+        self.gamepadHost = gamepadHost
 
-        // FlutterAppDelegate only hands out registrars when the window's root
-        // is a FlutterViewController, and the host sits there now, so plugins
-        // register against the controller directly.
+        // The scene's root is a gamepad host, so register plugins against the
+        // Flutter controller directly rather than looking it up via the window.
         GeneratedPluginRegistrant.register(with: flutterViewController)
 
         nativeApplePlayerChannel = NativeApplePlayerChannel(
@@ -85,20 +85,72 @@ class AppDelegate: FlutterAppDelegate {
             textures: flutterViewController,
             rootViewController: flutterViewController)
 
-        if let launchUrl = launchOptions?[.url] as? URL {
-            topShelfChannel?.deliverDeepLink(launchUrl, isLaunch: true)
-        }
-
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
 
-    override func application(
-        _ app: UIApplication,
-        open url: URL,
-        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-    ) -> Bool {
-        topShelfChannel?.deliverDeepLink(url, isLaunch: false)
-        return true
+    func deliverDeepLink(_ url: URL, isLaunch: Bool) {
+        topShelfChannel?.deliverDeepLink(url, isLaunch: isLaunch)
+    }
+
+    func deliverSceneConnectionURLs(_ contexts: Set<UIOpenURLContext>) {
+        for context in contexts {
+            // A reconnected scene reuses the running engine, whose Dart side has
+            // already consumed the initial link. Send those links as events.
+            deliverDeepLink(context.url, isLaunch: !hasConnectedScene)
+        }
+        hasConnectedScene = true
+    }
+}
+
+// Kept in the existing source file so adopting scenes needs no Xcode project
+// changes (including developers' local signing settings).
+class SceneDelegate: FlutterSceneDelegate {
+    private var registeredEngine: FlutterEngine?
+
+    override func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        guard let windowScene = scene as? UIWindowScene,
+            let appDelegate = UIApplication.shared.delegate as? AppDelegate,
+            let gamepadHost = appDelegate.gamepadHost
+        else {
+            super.scene(scene, willConnectTo: session, options: connectionOptions)
+            return
+        }
+
+        let window = UIWindow(windowScene: windowScene)
+        window.rootViewController = gamepadHost
+        self.window = window
+
+        // The Flutter controller is nested inside the gamepad host, so associate
+        // its engine explicitly before Flutter forwards scene events to plugins.
+        let engine = gamepadHost.flutterViewController.engine
+        registerSceneLifeCycle(with: engine)
+        registeredEngine = engine
+
+        appDelegate.deliverSceneConnectionURLs(connectionOptions.urlContexts)
+
+        window.makeKeyAndVisible()
+        super.scene(scene, willConnectTo: session, options: connectionOptions)
+    }
+
+    override func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        for context in URLContexts {
+            (UIApplication.shared.delegate as? AppDelegate)?.deliverDeepLink(
+                context.url, isLaunch: false)
+        }
+    }
+
+    override func sceneDidDisconnect(_ scene: UIScene) {
+        super.sceneDidDisconnect(scene)
+        if let engine = registeredEngine {
+            unregisterSceneLifeCycle(with: engine)
+            registeredEngine = nil
+        }
+        window?.rootViewController = nil
+        window = nil
     }
 }
 
