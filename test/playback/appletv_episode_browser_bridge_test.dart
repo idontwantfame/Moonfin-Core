@@ -62,6 +62,42 @@ void main() {
     expect(await sent(canBrowse: false), isFalse);
   });
 
+  test('passes the seek protection setting to the native player', () async {
+    await backend.setUiMetadata(
+      topTitle: '',
+      topSubtitle: '',
+      chapters: const [],
+      hasPrevious: false,
+      hasNext: false,
+      skipForwardMs: 30000,
+      skipBackMs: 10000,
+      seekOnlyWithControlsVisible: true,
+      audioTracks: const [],
+      subtitleTracks: const [],
+    );
+
+    expect(
+      (calls.last.arguments as Map)['seekOnlyWithControlsVisible'],
+      isTrue,
+    );
+
+    await backend.setUiMetadata(
+      topTitle: '',
+      topSubtitle: '',
+      chapters: const [],
+      hasPrevious: false,
+      hasNext: false,
+      skipForwardMs: 30000,
+      skipBackMs: 10000,
+      audioTracks: const [],
+      subtitleTracks: const [],
+    );
+    expect(
+      (calls.last.arguments as Map)['seekOnlyWithControlsVisible'],
+      isFalse,
+    );
+  });
+
   test('opens, refreshes and closes the panel by name', () async {
     const content = {'title': 'The Show', 'episodes': <Object>[]};
     await backend.showEpisodeBrowser(content);

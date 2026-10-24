@@ -137,6 +137,14 @@ class _VideoPlaybackScreen extends StatelessWidget {
                   60000: l10n.settingsSixtySeconds,
                 },
               ),
+              if (PlatformDetection.isAppleTV)
+                SwitchPreferenceTile(
+                  preference: UserPreferences.appleTvSeekOnlyWithControls,
+                  title: 'Clickpad seeks only with controls visible',
+                  subtitle:
+                      'The first Left/Right click or touchpad drag shows the controls without seeking.',
+                  icon: Icons.touch_app_outlined,
+                ),
               SwitchPreferenceTile(
                 preference: UserPreferences.showChapterMarkers,
                 title: l10n.showChapterMarkers,

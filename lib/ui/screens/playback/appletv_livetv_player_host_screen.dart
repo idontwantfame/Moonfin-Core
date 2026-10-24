@@ -612,6 +612,9 @@ class _AppleTvLiveTvPlayerHostScreenState
       hasNext: false,
       skipForwardMs: _prefs.get(UserPreferences.skipForwardLength),
       skipBackMs: _prefs.get(UserPreferences.skipBackLength),
+      seekOnlyWithControlsVisible: _prefs.get(
+        UserPreferences.appleTvSeekOnlyWithControls,
+      ),
       audioTracks: _trackOptions(audioStreams, _manager.audioStreamIndex),
       subtitleTracks: [
         ..._trackOptions(

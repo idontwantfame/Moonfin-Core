@@ -100,6 +100,8 @@ final class NativeApplePlayerViewController: UIViewController {
 
     private var skipForwardMs = 30000
     private var skipBackMs = 10000
+    private var seekOnlyWithControlsVisible = false
+    private var panScrubBlockedUntilEnd = false
     private var audioTracks: [(index: Int, label: String, subtitle: String, selected: Bool)] = []
     private var subtitleTracks: [(index: Int, label: String, subtitle: String, selected: Bool)] = []
     private var streamInfoSections: [[String: Any]] = []
@@ -1348,6 +1350,7 @@ final class NativeApplePlayerViewController: UIViewController {
 
         skipForwardMs = (args["skipForwardMs"] as? NSNumber)?.intValue ?? 30000
         skipBackMs = (args["skipBackMs"] as? NSNumber)?.intValue ?? 10000
+        seekOnlyWithControlsVisible = (args["seekOnlyWithControlsVisible"] as? Bool) ?? false
         // A fast forward or rewind key on a remote reaches the transport
         // commands rather than the clickpad, so they move by the same setting.
         player.nowPlaying.setSkipIntervals(
@@ -1821,14 +1824,23 @@ final class NativeApplePlayerViewController: UIViewController {
         // can't strand the engaged state and misroute the next press.
         switch recognizer.state {
         case .ended, .cancelled, .failed:
+            panScrubBlockedUntilEnd = false
             finishPanScrub()
             return
         default:
             break
         }
         guard presentedViewController == nil, !nextUpVisible, !isLive, !cinemaSkipActive else { return }
+        if panScrubBlockedUntilEnd { return }
         switch recognizer.state {
         case .began:
+            if seekOnlyWithControlsVisible && !isOsdOnScreen {
+                panScrubBlockedUntilEnd = true
+                focusedZone = .scrubber
+                updateFocusHighlight()
+                showOsd()
+                return
+            }
             panScrubEngaged = false
             panScrubLastTranslationX = 0
         case .changed:
@@ -2152,6 +2164,12 @@ final class NativeApplePlayerViewController: UIViewController {
     /// A live stream seeks only when it keeps a window to rewind through,
     /// and otherwise keeps the button behaviour.
     private func seekOrMoveFocus(forward: Bool) {
+        if seekOnlyWithControlsVisible && !isOsdOnScreen {
+            focusedZone = isLive && rewindRange == nil ? .buttons : .scrubber
+            updateFocusHighlight()
+            showOsd()
+            return
+        }
         if !isOsdOnScreen, !isLive || rewindRange != nil {
             focusedZone = .scrubber
             updateFocusHighlight()

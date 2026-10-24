@@ -2655,6 +2655,11 @@ class UserPreferences extends ChangeNotifier {
     defaultValue: 30000,
   );
 
+  static final appleTvSeekOnlyWithControls = Preference(
+    key: 'appleTvSeekOnlyWithControls',
+    defaultValue: false,
+  );
+
   static final unpauseRewindDuration = Preference(
     key: 'unpauseRewindDuration',
     defaultValue: 0,

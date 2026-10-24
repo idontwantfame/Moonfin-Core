@@ -65,7 +65,7 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
   StreamSubscription<Duration>? _positionSub;
   UserPreferences? _prefsListened;
   SubtitleStyle? _lastSubtitleStyle;
-  String _lastTrickplayPrefs = '';
+  String _lastNativeUiPrefs = '';
   String _lastTimeSlots = '';
   TrickplayInfo? _trickplayInfo;
   String? _trickplayKey;
@@ -210,7 +210,7 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
         segmentService: () => _segmentService,
       );
       _prefsListened = prefs;
-      _lastTrickplayPrefs = _trickplayPrefsSnapshot(prefs);
+      _lastNativeUiPrefs = _nativeUiPrefsSnapshot(prefs);
       _lastTimeSlots = _timeSlotsSnapshot(prefs);
       prefs.addListener(_onPrefsChanged);
     } catch (_) {}
@@ -589,12 +589,13 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
 
   // The native player reads these once per metadata push, so a change made
   // while a video is playing has to be sent over again.
-  String _trickplayPrefsSnapshot(UserPreferences prefs) => [
+  String _nativeUiPrefsSnapshot(UserPreferences prefs) => [
     prefs.get(UserPreferences.trickPlayMode).name,
     prefs.get(UserPreferences.trickPlayPreviewScalePercent),
     prefs.get(UserPreferences.trickPlayVerticalPositionPercent),
     prefs.get(UserPreferences.trickPlayFollowScrubPosition),
     prefs.get(UserPreferences.trickPlayPauseWhileScrubbing),
+    prefs.get(UserPreferences.appleTvSeekOnlyWithControls),
   ].join('|');
 
   String _timeSlotsSnapshot(UserPreferences prefs) =>
@@ -611,9 +612,9 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
       _lastTimeSlots = slots;
       _pushTimeSlots();
     }
-    final next = _trickplayPrefsSnapshot(prefs);
-    if (next == _lastTrickplayPrefs) return;
-    _lastTrickplayPrefs = next;
+    final next = _nativeUiPrefsSnapshot(prefs);
+    if (next == _lastNativeUiPrefs) return;
+    _lastNativeUiPrefs = next;
     _pushMetadata();
   }
 
@@ -1263,6 +1264,10 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
       hasNext: manager.queueService.hasNext,
       skipForwardMs: skipForwardMs,
       skipBackMs: skipBackMs,
+      seekOnlyWithControlsVisible: _prefBool(
+        UserPreferences.appleTvSeekOnlyWithControls,
+        defaultValue: false,
+      ),
       audioTracks: _trackOptions(
         audioStreams,
         manager.audioStreamIndex,
