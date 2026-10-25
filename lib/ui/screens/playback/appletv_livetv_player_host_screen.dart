@@ -199,10 +199,8 @@ class _AppleTvLiveTvPlayerHostScreenState
     super.dispose();
   }
 
-  String _clickpadPrefsSnapshot() => [
-    _prefs.get(UserPreferences.appleTvClickpadSeekMode).name,
-    _prefs.get(UserPreferences.appleTvClickpadDragThreshold),
-  ].join('|');
+  String _clickpadPrefsSnapshot() =>
+      _prefs.get(UserPreferences.appleTvClickpadSeekMode).name;
 
   void _onPrefsChanged() {
     _pushSubtitleStyle();
@@ -628,9 +626,6 @@ class _AppleTvLiveTvPlayerHostScreenState
       skipForwardMs: _prefs.get(UserPreferences.skipForwardLength),
       skipBackMs: _prefs.get(UserPreferences.skipBackLength),
       clickpadSeekMode: _prefs.get(UserPreferences.appleTvClickpadSeekMode),
-      clickpadDragThreshold: _prefs.get(
-        UserPreferences.appleTvClickpadDragThreshold,
-      ),
       audioTracks: _trackOptions(audioStreams, _manager.audioStreamIndex),
       subtitleTracks: [
         ..._trackOptions(

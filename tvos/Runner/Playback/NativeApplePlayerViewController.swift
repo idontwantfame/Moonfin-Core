@@ -104,7 +104,6 @@ final class NativeApplePlayerViewController: UIViewController {
         case always, controlsVisible, pausedOnly
     }
     private var clickpadSeekMode: ClickpadSeekMode = .always
-    private var clickpadDragThreshold: CGFloat = 24
     private var panScrubBlockedUntilEnd = false
     private var audioTracks: [(index: Int, label: String, subtitle: String, selected: Bool)] = []
     private var subtitleTracks: [(index: Int, label: String, subtitle: String, selected: Bool)] = []
@@ -1357,8 +1356,6 @@ final class NativeApplePlayerViewController: UIViewController {
         #if os(tvOS)
         clickpadSeekMode = ClickpadSeekMode(
             rawValue: args["clickpadSeekMode"] as? String ?? "") ?? .always
-        let dragThreshold = (args["clickpadDragThreshold"] as? NSNumber)?.intValue ?? 24
-        clickpadDragThreshold = CGFloat(min(96, max(24, dragThreshold)))
         #endif
         // A fast forward or rewind key on a remote reaches the transport
         // commands rather than the clickpad, so they move by the same setting.
@@ -1864,7 +1861,7 @@ final class NativeApplePlayerViewController: UIViewController {
                 // Engage only once horizontal travel clearly dominates and the
                 // buttons aren't focused, so swipes keep switching zones and
                 // travelling the buttons instead of scrubbing.
-                guard abs(t.x) > clickpadDragThreshold, abs(t.x) > abs(t.y) else { return }
+                guard abs(t.x) > 24, abs(t.x) > abs(t.y) else { return }
                 #if os(tvOS)
                 guard focusedZone == .scrubber || !isOsdOnScreen else { return }
                 #endif

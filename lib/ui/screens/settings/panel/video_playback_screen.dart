@@ -137,7 +137,7 @@ class _VideoPlaybackScreen extends StatelessWidget {
                   60000: l10n.settingsSixtySeconds,
                 },
               ),
-              if (PlatformDetection.isAppleTV) ...[
+              if (PlatformDetection.isAppleTV)
                 EnumPreferenceTile<AppleTvClickpadSeekMode>(
                   preference: UserPreferences.appleTvClickpadSeekMode,
                   title: 'Allow clickpad seeking',
@@ -151,19 +151,6 @@ class _VideoPlaybackScreen extends StatelessWidget {
                     AppleTvClickpadSeekMode.pausedOnly => 'Only while paused',
                   },
                 ),
-                IntPickerPreferenceTile(
-                  preference: UserPreferences.appleTvClickpadDragThreshold,
-                  title: 'Drag distance before seeking',
-                  description:
-                      'Longer distances help ignore small accidental movements. Seeking speed stays the same.',
-                  icon: Icons.swipe_outlined,
-                  options: const {
-                    24: 'Short (default)',
-                    48: 'Medium',
-                    96: 'Long',
-                  },
-                ),
-              ],
               SwitchPreferenceTile(
                 preference: UserPreferences.showChapterMarkers,
                 title: l10n.showChapterMarkers,

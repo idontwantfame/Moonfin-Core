@@ -33,21 +33,16 @@ void main() {
     );
   });
 
-  test(
-    'migration preserves a new mode and drag distance already chosen',
-    () async {
-      final prefs = await _prefsWith({
-        'appleTvSeekOnlyWithControls': true,
-        'appleTvClickpadSeekMode': 'pausedOnly',
-        'appleTvClickpadDragThreshold': 96,
-      });
-      expect(
-        prefs.get(UserPreferences.appleTvClickpadSeekMode),
-        AppleTvClickpadSeekMode.pausedOnly,
-      );
-      expect(prefs.get(UserPreferences.appleTvClickpadDragThreshold), 96);
-    },
-  );
+  test('migration preserves a new mode already chosen', () async {
+    final prefs = await _prefsWith({
+      'appleTvSeekOnlyWithControls': true,
+      'appleTvClickpadSeekMode': 'pausedOnly',
+    });
+    expect(
+      prefs.get(UserPreferences.appleTvClickpadSeekMode),
+      AppleTvClickpadSeekMode.pausedOnly,
+    );
+  });
 
   test('a fresh install keeps the original seeking behaviour', () async {
     final prefs = await _prefsWith({});
@@ -55,7 +50,6 @@ void main() {
       prefs.get(UserPreferences.appleTvClickpadSeekMode),
       AppleTvClickpadSeekMode.always,
     );
-    expect(prefs.get(UserPreferences.appleTvClickpadDragThreshold), 24);
   });
 
   test('chosen mode survives recreating preferences after migration', () async {
@@ -64,7 +58,6 @@ void main() {
       UserPreferences.appleTvClickpadSeekMode,
       AppleTvClickpadSeekMode.pausedOnly,
     );
-    await prefs.set(UserPreferences.appleTvClickpadDragThreshold, 48);
 
     final store = PreferenceStore();
     await store.init();
@@ -73,6 +66,5 @@ void main() {
       reloaded.get(UserPreferences.appleTvClickpadSeekMode),
       AppleTvClickpadSeekMode.pausedOnly,
     );
-    expect(reloaded.get(UserPreferences.appleTvClickpadDragThreshold), 48);
   });
 }

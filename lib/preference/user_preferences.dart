@@ -2676,13 +2676,6 @@ class UserPreferences extends ChangeNotifier {
     values: AppleTvClickpadSeekMode.values,
   );
 
-  // Horizontal travel in the native player's view coordinates. This changes
-  // when a drag engages scrubbing, not how far or how fast it seeks afterward.
-  static final appleTvClickpadDragThreshold = Preference(
-    key: 'appleTvClickpadDragThreshold',
-    defaultValue: 24,
-  );
-
   static final unpauseRewindDuration = Preference(
     key: 'unpauseRewindDuration',
     defaultValue: 0,

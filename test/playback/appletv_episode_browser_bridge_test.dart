@@ -63,32 +63,8 @@ void main() {
     expect(await sent(canBrowse: false), isFalse);
   });
 
-  test('passes seek modes and drag distances to the native player', () async {
+  test('passes seek modes to the native player', () async {
     for (final mode in AppleTvClickpadSeekMode.values) {
-      for (final threshold in [24, 48, 96]) {
-        await backend.setUiMetadata(
-          topTitle: '',
-          topSubtitle: '',
-          chapters: const [],
-          hasPrevious: false,
-          hasNext: false,
-          skipForwardMs: 30000,
-          skipBackMs: 10000,
-          clickpadSeekMode: mode,
-          clickpadDragThreshold: threshold,
-          audioTracks: const [],
-          subtitleTracks: const [],
-        );
-        final args = calls.last.arguments as Map;
-        expect(args['clickpadSeekMode'], mode.name);
-        expect(args['clickpadDragThreshold'], threshold);
-      }
-    }
-  });
-
-  test(
-    'leaves seeking unrestricted with the original drag distance by default',
-    () async {
       await backend.setUiMetadata(
         topTitle: '',
         topSubtitle: '',
@@ -97,13 +73,29 @@ void main() {
         hasNext: false,
         skipForwardMs: 30000,
         skipBackMs: 10000,
+        clickpadSeekMode: mode,
         audioTracks: const [],
         subtitleTracks: const [],
       );
-      expect((calls.last.arguments as Map)['clickpadSeekMode'], 'always');
-      expect((calls.last.arguments as Map)['clickpadDragThreshold'], 24);
-    },
-  );
+      final args = calls.last.arguments as Map;
+      expect(args['clickpadSeekMode'], mode.name);
+    }
+  });
+
+  test('leaves seeking unrestricted by default', () async {
+    await backend.setUiMetadata(
+      topTitle: '',
+      topSubtitle: '',
+      chapters: const [],
+      hasPrevious: false,
+      hasNext: false,
+      skipForwardMs: 30000,
+      skipBackMs: 10000,
+      audioTracks: const [],
+      subtitleTracks: const [],
+    );
+    expect((calls.last.arguments as Map)['clickpadSeekMode'], 'always');
+  });
 
   test('opens, refreshes and closes the panel by name', () async {
     const content = {'title': 'The Show', 'episodes': <Object>[]};
