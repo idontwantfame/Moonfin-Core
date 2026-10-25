@@ -120,6 +120,21 @@ class UserPreferences extends ChangeNotifier {
     _enforceMediaQueuingAlwaysOn();
     _seedClockFormatFromSystem();
     _migrateScreensaverPreferences();
+    _migrateAppleTvClickpadSeeking();
+  }
+
+  void _migrateAppleTvClickpadSeeking() {
+    const legacyKey = 'appleTvSeekOnlyWithControls';
+    if (!_store.containsKey(legacyKey)) return;
+    if (!_store.containsKey(appleTvClickpadSeekMode.key)) {
+      _store.set(
+        appleTvClickpadSeekMode,
+        (_store.getBool(legacyKey) ?? false)
+            ? AppleTvClickpadSeekMode.controlsVisible
+            : AppleTvClickpadSeekMode.always,
+      );
+    }
+    _store.remove(legacyKey);
   }
 
   // Carry over the pre-rename jellyseerr* preference keys to their seerr* names.
@@ -2655,9 +2670,17 @@ class UserPreferences extends ChangeNotifier {
     defaultValue: 30000,
   );
 
-  static final appleTvSeekOnlyWithControls = Preference(
-    key: 'appleTvSeekOnlyWithControls',
-    defaultValue: false,
+  static final appleTvClickpadSeekMode = EnumPreference(
+    key: 'appleTvClickpadSeekMode',
+    defaultValue: AppleTvClickpadSeekMode.always,
+    values: AppleTvClickpadSeekMode.values,
+  );
+
+  // Horizontal travel in the native player's view coordinates. This changes
+  // when a drag engages scrubbing, not how far or how fast it seeks afterward.
+  static final appleTvClickpadDragThreshold = Preference(
+    key: 'appleTvClickpadDragThreshold',
+    defaultValue: 24,
   );
 
   static final unpauseRewindDuration = Preference(

@@ -100,7 +100,11 @@ final class NativeApplePlayerViewController: UIViewController {
 
     private var skipForwardMs = 30000
     private var skipBackMs = 10000
-    private var seekOnlyWithControlsVisible = false
+    private enum ClickpadSeekMode: String {
+        case always, controlsVisible, pausedOnly
+    }
+    private var clickpadSeekMode: ClickpadSeekMode = .always
+    private var clickpadDragThreshold: CGFloat = 24
     private var panScrubBlockedUntilEnd = false
     private var audioTracks: [(index: Int, label: String, subtitle: String, selected: Bool)] = []
     private var subtitleTracks: [(index: Int, label: String, subtitle: String, selected: Bool)] = []
@@ -1350,7 +1354,12 @@ final class NativeApplePlayerViewController: UIViewController {
 
         skipForwardMs = (args["skipForwardMs"] as? NSNumber)?.intValue ?? 30000
         skipBackMs = (args["skipBackMs"] as? NSNumber)?.intValue ?? 10000
-        seekOnlyWithControlsVisible = (args["seekOnlyWithControlsVisible"] as? Bool) ?? false
+        #if os(tvOS)
+        clickpadSeekMode = ClickpadSeekMode(
+            rawValue: args["clickpadSeekMode"] as? String ?? "") ?? .always
+        let dragThreshold = (args["clickpadDragThreshold"] as? NSNumber)?.intValue ?? 24
+        clickpadDragThreshold = CGFloat(min(96, max(24, dragThreshold)))
+        #endif
         // A fast forward or rewind key on a remote reaches the transport
         // commands rather than the clickpad, so they move by the same setting.
         player.nowPlaying.setSkipIntervals(
@@ -1825,7 +1834,7 @@ final class NativeApplePlayerViewController: UIViewController {
         switch recognizer.state {
         case .ended, .cancelled, .failed:
             panScrubBlockedUntilEnd = false
-            finishPanScrub()
+            finishPanScrub(commit: clickpadSeekingAllowed)
             return
         default:
             break
@@ -1834,22 +1843,28 @@ final class NativeApplePlayerViewController: UIViewController {
         if panScrubBlockedUntilEnd { return }
         switch recognizer.state {
         case .began:
-            if seekOnlyWithControlsVisible && !isOsdOnScreen {
+            if !clickpadSeekingAllowed {
                 panScrubBlockedUntilEnd = true
-                focusedZone = .scrubber
-                updateFocusHighlight()
-                showOsd()
+                revealControlsForBlockedSeek()
                 return
             }
             panScrubEngaged = false
             panScrubLastTranslationX = 0
         case .changed:
+            // Resuming playback must also stop a drag that began while paused.
+            // Keep it blocked until the finger lifts, even if playback pauses again.
+            guard clickpadSeekingAllowed else {
+                panScrubBlockedUntilEnd = true
+                finishPanScrub(commit: false)
+                revealControlsForBlockedSeek()
+                return
+            }
             let t = recognizer.translation(in: view)
             if !panScrubEngaged {
                 // Engage only once horizontal travel clearly dominates and the
                 // buttons aren't focused, so swipes keep switching zones and
                 // travelling the buttons instead of scrubbing.
-                guard abs(t.x) > 24, abs(t.x) > abs(t.y) else { return }
+                guard abs(t.x) > clickpadDragThreshold, abs(t.x) > abs(t.y) else { return }
                 #if os(tvOS)
                 guard focusedZone == .scrubber || !isOsdOnScreen else { return }
                 #endif
@@ -2127,6 +2142,13 @@ final class NativeApplePlayerViewController: UIViewController {
     }
 
     private func tickScrubHold() {
+        guard scrubHoldTimer != nil else { return }
+        guard clickpadSeekingAllowed else {
+            scrubHoldTimer?.invalidate()
+            scrubHoldTimer = nil
+            abandonScrubSession()
+            return
+        }
         let held = ProcessInfo.processInfo.systemUptime - scrubHoldStart
         guard held >= 0.4 else { return }
         let base = Double(scrubHoldForward ? skipForwardMs : skipBackMs)
@@ -2142,7 +2164,13 @@ final class NativeApplePlayerViewController: UIViewController {
         scrubHoldTimer = nil
         // While the preview holds a paused frame the session outlives the key
         // and play is what commits. Otherwise letting go is the commit.
-        if scrubTargetMs != nil && !pauseDuringScrub { commitScrub() }
+        if scrubTargetMs != nil && !pauseDuringScrub {
+            if clickpadSeekingAllowed {
+                commitScrub()
+            } else {
+                abandonScrubSession()
+            }
+        }
     }
 
     private func handleSelect() {
@@ -2155,8 +2183,27 @@ final class NativeApplePlayerViewController: UIViewController {
         }
     }
 
-    /// A sideways press with the OSD down seeks straight away instead of
-    /// moving a button highlight nobody can see, which is what made a skip
+    private var clickpadSeekingAllowed: Bool {
+        switch clickpadSeekMode {
+        case .always:
+            return true
+        case .controlsVisible:
+            return isOsdOnScreen
+        case .pausedOnly:
+            return isOsdOnScreen && isPaused()
+        }
+    }
+
+    private func revealControlsForBlockedSeek() {
+        if !isOsdOnScreen {
+            focusedZone = isLive && rewindRange == nil ? .buttons : .scrubber
+        }
+        updateFocusHighlight()
+        showOsd()
+    }
+
+    /// In Always mode, a sideways press with the OSD down seeks straight away
+    /// instead of moving a button highlight nobody can see, which made a skip
     /// take three presses: one to raise the OSD, one to reach the button and
     /// one to fire it. The zone follows the seek, so the OSD arrives on the
     /// scrubber and the press after it keeps seeking.
@@ -2164,10 +2211,9 @@ final class NativeApplePlayerViewController: UIViewController {
     /// A live stream seeks only when it keeps a window to rewind through,
     /// and otherwise keeps the button behaviour.
     private func seekOrMoveFocus(forward: Bool) {
-        if seekOnlyWithControlsVisible && !isOsdOnScreen {
-            focusedZone = isLive && rewindRange == nil ? .buttons : .scrubber
-            updateFocusHighlight()
-            showOsd()
+        // Left/Right still navigates visible action buttons in every mode.
+        if (!isOsdOnScreen || focusedZone == .scrubber) && !clickpadSeekingAllowed {
+            revealControlsForBlockedSeek()
             return
         }
         if !isOsdOnScreen, !isLive || rewindRange != nil {

@@ -595,7 +595,8 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
     prefs.get(UserPreferences.trickPlayVerticalPositionPercent),
     prefs.get(UserPreferences.trickPlayFollowScrubPosition),
     prefs.get(UserPreferences.trickPlayPauseWhileScrubbing),
-    prefs.get(UserPreferences.appleTvSeekOnlyWithControls),
+    prefs.get(UserPreferences.appleTvClickpadSeekMode).name,
+    prefs.get(UserPreferences.appleTvClickpadDragThreshold),
   ].join('|');
 
   String _timeSlotsSnapshot(UserPreferences prefs) =>
@@ -1264,9 +1265,12 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
       hasNext: manager.queueService.hasNext,
       skipForwardMs: skipForwardMs,
       skipBackMs: skipBackMs,
-      seekOnlyWithControlsVisible: _prefBool(
-        UserPreferences.appleTvSeekOnlyWithControls,
-        defaultValue: false,
+      clickpadSeekMode:
+          _prefsListened?.get(UserPreferences.appleTvClickpadSeekMode) ??
+          AppleTvClickpadSeekMode.always,
+      clickpadDragThreshold: _prefInt(
+        UserPreferences.appleTvClickpadDragThreshold,
+        defaultValue: 24,
       ),
       audioTracks: _trackOptions(
         audioStreams,

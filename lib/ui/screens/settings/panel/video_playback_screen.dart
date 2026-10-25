@@ -137,14 +137,33 @@ class _VideoPlaybackScreen extends StatelessWidget {
                   60000: l10n.settingsSixtySeconds,
                 },
               ),
-              if (PlatformDetection.isAppleTV)
-                SwitchPreferenceTile(
-                  preference: UserPreferences.appleTvSeekOnlyWithControls,
-                  title: 'Clickpad seeks only with controls visible',
-                  subtitle:
-                      'The first Left/Right click or touchpad drag shows the controls without seeking.',
+              if (PlatformDetection.isAppleTV) ...[
+                EnumPreferenceTile<AppleTvClickpadSeekMode>(
+                  preference: UserPreferences.appleTvClickpadSeekMode,
+                  title: 'Allow clickpad seeking',
+                  description:
+                      'Choose when Left/Right clicks and touchpad drags can seek. Protected modes reveal hidden controls first.',
                   icon: Icons.touch_app_outlined,
+                  labelOf: (v) => switch (v) {
+                    AppleTvClickpadSeekMode.always => 'Always',
+                    AppleTvClickpadSeekMode.controlsVisible =>
+                        'When controls are visible',
+                    AppleTvClickpadSeekMode.pausedOnly => 'Only while paused',
+                  },
                 ),
+                IntPickerPreferenceTile(
+                  preference: UserPreferences.appleTvClickpadDragThreshold,
+                  title: 'Drag distance before seeking',
+                  description:
+                      'Longer distances help ignore small accidental movements. Seeking speed stays the same.',
+                  icon: Icons.swipe_outlined,
+                  options: const {
+                    24: 'Short (default)',
+                    48: 'Medium',
+                    96: 'Long',
+                  },
+                ),
+              ],
               SwitchPreferenceTile(
                 preference: UserPreferences.showChapterMarkers,
                 title: l10n.showChapterMarkers,

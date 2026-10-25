@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellyfin_preference/jellyfin_preference.dart';
 import 'package:moonfin/playback/native_apple_player_backend.dart';
+import 'package:moonfin/preference/preference_constants.dart';
 import 'package:moonfin/preference/user_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -62,41 +63,47 @@ void main() {
     expect(await sent(canBrowse: false), isFalse);
   });
 
-  test('passes the seek protection setting to the native player', () async {
-    await backend.setUiMetadata(
-      topTitle: '',
-      topSubtitle: '',
-      chapters: const [],
-      hasPrevious: false,
-      hasNext: false,
-      skipForwardMs: 30000,
-      skipBackMs: 10000,
-      seekOnlyWithControlsVisible: true,
-      audioTracks: const [],
-      subtitleTracks: const [],
-    );
-
-    expect(
-      (calls.last.arguments as Map)['seekOnlyWithControlsVisible'],
-      isTrue,
-    );
-
-    await backend.setUiMetadata(
-      topTitle: '',
-      topSubtitle: '',
-      chapters: const [],
-      hasPrevious: false,
-      hasNext: false,
-      skipForwardMs: 30000,
-      skipBackMs: 10000,
-      audioTracks: const [],
-      subtitleTracks: const [],
-    );
-    expect(
-      (calls.last.arguments as Map)['seekOnlyWithControlsVisible'],
-      isFalse,
-    );
+  test('passes seek modes and drag distances to the native player', () async {
+    for (final mode in AppleTvClickpadSeekMode.values) {
+      for (final threshold in [24, 48, 96]) {
+        await backend.setUiMetadata(
+          topTitle: '',
+          topSubtitle: '',
+          chapters: const [],
+          hasPrevious: false,
+          hasNext: false,
+          skipForwardMs: 30000,
+          skipBackMs: 10000,
+          clickpadSeekMode: mode,
+          clickpadDragThreshold: threshold,
+          audioTracks: const [],
+          subtitleTracks: const [],
+        );
+        final args = calls.last.arguments as Map;
+        expect(args['clickpadSeekMode'], mode.name);
+        expect(args['clickpadDragThreshold'], threshold);
+      }
+    }
   });
+
+  test(
+    'leaves seeking unrestricted with the original drag distance by default',
+    () async {
+      await backend.setUiMetadata(
+        topTitle: '',
+        topSubtitle: '',
+        chapters: const [],
+        hasPrevious: false,
+        hasNext: false,
+        skipForwardMs: 30000,
+        skipBackMs: 10000,
+        audioTracks: const [],
+        subtitleTracks: const [],
+      );
+      expect((calls.last.arguments as Map)['clickpadSeekMode'], 'always');
+      expect((calls.last.arguments as Map)['clickpadDragThreshold'], 24);
+    },
+  );
 
   test('opens, refreshes and closes the panel by name', () async {
     const content = {'title': 'The Show', 'episodes': <Object>[]};

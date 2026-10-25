@@ -1403,14 +1403,22 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
     video.leaf('skipForwardLength', l10n.skipForwardLength, keywords: [
       'seek forward',
     ]),
-    if (PlatformDetection.isAppleTV)
-      video.leaf(
-        'appleTvSeekOnlyWithControls',
-        'Clickpad seeks only with controls visible',
-        subtitle:
-            'The first Left/Right click or touchpad drag shows the controls without seeking.',
-        keywords: ['remote', 'accidental skip', 'seek lock'],
-      ),
+      if (PlatformDetection.isAppleTV) ...[
+        video.leaf(
+          'appleTvClickpadSeekMode',
+          'Allow clickpad seeking',
+          subtitle:
+              'Choose when Left/Right clicks and touchpad drags can seek. Protected modes reveal hidden controls first.',
+          keywords: ['remote', 'accidental skip', 'seek lock', 'paused'],
+        ),
+        video.leaf(
+          'appleTvClickpadDragThreshold',
+          'Drag distance before seeking',
+          subtitle:
+              'Longer distances help ignore small accidental movements. Seeking speed stays the same.',
+          keywords: ['remote', 'touchpad', 'sensitivity', 'tolerance', 'swipe'],
+        ),
+      ],
     video.leaf(
       'showChapterMarkers',
       l10n.showChapterMarkers,
